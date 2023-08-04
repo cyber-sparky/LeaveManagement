@@ -1,5 +1,11 @@
 # LeaveManagement
 
+## Description
+
+The LeaveManagement project is a leave management system that allows employees to manage their leave requests and helps employers track and approve leave requests.
+
+
+## DB TABLES
 ## Employee Table
 
 | Field             | Type         | Null | Key | Default             | Extra          |
