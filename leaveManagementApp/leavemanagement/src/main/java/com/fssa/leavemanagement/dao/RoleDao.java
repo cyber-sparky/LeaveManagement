@@ -5,15 +5,16 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.logging.Logger;
 
 import com.fssa.leavemanagement.exceptions.InvalidRoleException;
 import com.fssa.leavemanagement.model.Role;
+import com.fssa.leavemanagement.util.ConnectionUtil;
+import com.fssa.leavemanagement.util.Logger;
 import com.fssa.leavemanagement.validator.RoleValidator;
 
 public class RoleDao {
 
-	public static final Logger LOGGER = Logger.getLogger(RoleDao.class.getName());
+	static Logger logger = new Logger();
 
 	public static boolean addRole(Role role) throws InvalidRoleException, SQLException {
 		try {
@@ -35,33 +36,25 @@ public class RoleDao {
 		}
 	}
 
-	public static boolean updateRole(Role role, int id) throws InvalidRoleException {
-		try {
-			RoleValidator.validate(role);
-		} catch (InvalidRoleException e) {
-			e.printStackTrace();
-			throw new InvalidRoleException("Invalid Role passed to DAO Layer");
-		}
-
+	public static int getRoleIdByName(String name) throws SQLException {
+		int id = 0;
+		String query = "SELECT id FROM role WHERE name = ?";
 		try (Connection connection = ConnectionUtil.getConnection()) {
-			String query = "UPDATE role SET name= ? WHERE id= ?";
 			try (PreparedStatement pst = connection.prepareStatement(query)) {
-				pst.setString(1, role.getName());
-				pst.setInt(2, id);
-
-				int rows = pst.executeUpdate();
-
-				return (rows > 0) ? true : false;
+				pst.setString(1, name);
+				try (ResultSet rs = pst.executeQuery()) {
+					while (rs.next()) {
+						id = rs.getInt(1);
+					}
+				}
 			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-			throw new InvalidRoleException(e);
 		}
+		return id;
 	}
 
-	public static boolean deleteRole(int id) throws InvalidRoleException {
+	public static boolean deleteRole(Role role) throws InvalidRoleException, SQLException {
 
-		RoleValidator.validateId(id);
+		int id = RoleDao.getRoleIdByName(role.getName());
 
 		try (Connection connection = ConnectionUtil.getConnection()) {
 			String query = "DELETE FROM role WHERE id= ?";
@@ -75,7 +68,7 @@ public class RoleDao {
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
-			throw new InvalidRoleException(e);
+			throw new InvalidRoleException(e.getMessage());
 		}
 	}
 
@@ -87,9 +80,9 @@ public class RoleDao {
 																			// value
 					while (resultSet.next()) { // printing columns until there is no values
 
-						LOGGER.info("id: " + resultSet.getInt(1));
-						LOGGER.info("name: " + resultSet.getString(2));
-						LOGGER.info("\n");
+						logger.info("id: " + resultSet.getInt(1));
+						logger.info("name: " + resultSet.getString(2));
+						logger.info("\n");
 
 					}
 					return true;
@@ -111,8 +104,8 @@ public class RoleDao {
 				try (ResultSet resultSet = pst.executeQuery()) {
 					if (resultSet.next()) {
 
-						LOGGER.info("id: " + resultSet.getInt(1));
-						LOGGER.info("name: " + resultSet.getString(2));
+						logger.info("id: " + resultSet.getInt(1));
+						logger.info("name: " + resultSet.getString(2));
 					}
 				}
 			} catch (SQLException e) {

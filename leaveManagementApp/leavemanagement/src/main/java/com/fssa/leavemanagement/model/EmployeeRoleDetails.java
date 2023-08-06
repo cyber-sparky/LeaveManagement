@@ -1,16 +1,23 @@
 package com.fssa.leavemanagement.model;
 
 public class EmployeeRoleDetails {
-	private int id;
+	private int roleId;
 	private int employeeId;
 	private int reportingManagerId;
-
-	public int getId() {
-		return id;
+	
+	
+	public EmployeeRoleDetails() {
+		/**
+		 * default constructor
+		 */
 	}
 
-	public void setId(int id) {
-		this.id = id;
+	public int getRoleId() {
+		return roleId;
+	}
+
+	public void setRoleId(int roleId) {
+		this.roleId = roleId;
 	}
 
 	public int getEmployeeId() {
@@ -29,9 +36,11 @@ public class EmployeeRoleDetails {
 		this.reportingManagerId = reportingManagerId;
 	}
 
-	public EmployeeRoleDetails(int id, int employeeId, int reportingManagerId) {
-		this.id = id;
+	public EmployeeRoleDetails(int roleId, int employeeId, int reportingManagerId) {
+
+		this.roleId = roleId;
 		this.employeeId = employeeId;
 		this.reportingManagerId = reportingManagerId;
 	}
+
 }

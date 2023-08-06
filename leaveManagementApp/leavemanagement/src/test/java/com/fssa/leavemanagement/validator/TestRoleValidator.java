@@ -3,9 +3,9 @@ package com.fssa.leavemanagement.validator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import com.fssa.leavemanagement.errors.RoleErrors;
 import com.fssa.leavemanagement.exceptions.InvalidRoleException;
 import com.fssa.leavemanagement.model.Role;
-import com.fssa.leavemanagement.model.RoleErrors;
 
 public class TestRoleValidator {
     @Test
@@ -56,8 +56,7 @@ public class TestRoleValidator {
         try {
             Assertions.assertTrue(RoleValidator.validateName("HR"));
         } catch (InvalidRoleException e) {
-            // Should not throw an exception for a valid name
-            Assertions.fail("Unexpected InvalidRoleException for a valid name");
+        	Assertions.assertEquals(RoleErrors.INVALID_NAME, e.getMessage());
         }
     }
 

@@ -10,9 +10,9 @@ import com.fssa.leavemanagement.validator.EmployeeValidator;
 
 public class EmployeeService {
 
-	public static boolean addEmployee(Employee employee) throws InvalidEmployeeException {
+	public static boolean addEmployee(Employee employee, String role) throws InvalidEmployeeException {
 		if (EmployeeValidator.validateEmployee(employee)) {
-			EmployeeDao.addEmployee(employee);
+			EmployeeDao.addEmployee(employee, role);
 		}
 		return true;
 	}
@@ -26,14 +26,17 @@ public class EmployeeService {
 	public static boolean updateEmployee(Employee employee, int id) throws InvalidEmployeeException, DAOException {
 		if (EmployeeValidator.validateEmployee(employee)) {
 			EmployeeDao.updateEmployee(employee, id);
+
 		}
 		return true;
 
 	}
 
-	public static boolean deleteEmployee(int id) throws InvalidEmployeeException, DAOException {
-		if (EmployeeValidator.validateId(id)) {
-			EmployeeDao.deleteEmployee(id);
+	public static boolean deleteEmployee(Employee employee)
+			throws InvalidEmployeeException, DAOException, SQLException {
+		if (EmployeeValidator.validateEmployee(employee)) {
+
+			EmployeeDao.deleteEmployee(employee);
 		}
 		return true;
 

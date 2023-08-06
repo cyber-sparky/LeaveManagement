@@ -1,12 +1,14 @@
 package com.fssa.leavemanagement.validator;
 
+import java.util.regex.Pattern;
+
+import com.fssa.leavemanagement.errors.RoleErrors;
 import com.fssa.leavemanagement.exceptions.InvalidRoleException;
 import com.fssa.leavemanagement.model.Role;
-import com.fssa.leavemanagement.model.RoleErrors;
 
 public class RoleValidator {
 	public static boolean validate(Role role) throws InvalidRoleException {
-		if(role == null) {
+		if (role == null) {
 			throw new InvalidRoleException(RoleErrors.INVALID_ROLE);
 		}
 		validateId(role.getId());
@@ -15,16 +17,22 @@ public class RoleValidator {
 	}
 
 	public static boolean validateId(int id) throws InvalidRoleException {
-		if (id <=0) {
+		if (id <= 0) {
 			throw new InvalidRoleException(RoleErrors.INVALID_ID);
 		}
 		return true;
 	}
 
 	public static boolean validateName(String name) throws InvalidRoleException {
-		if (name.trim().length() <= 0 || name.length() < 2) {
+		if (name == null || name.trim().length() <= 2) {
 			throw new InvalidRoleException(RoleErrors.INVALID_NAME);
 		}
-		return true;
+		String regex = "^[A-Za-z ]{2,}$";
+		boolean match = Pattern.compile(regex).matcher(name).matches();
+		if (match) {
+			return true;
+		} else {
+			throw new InvalidRoleException(RoleErrors.INVALID_NAME);
+		}
 	}
 }

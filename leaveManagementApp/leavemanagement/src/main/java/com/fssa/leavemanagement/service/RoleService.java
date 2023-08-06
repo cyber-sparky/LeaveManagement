@@ -14,14 +14,7 @@ public class RoleService {
 			RoleDao.addRole(role);
 		}
 		return true;
-		
-	}
 
-	public static boolean updateRole(Role role, int id) throws InvalidRoleException {
-		if (RoleValidator.validate(role) && RoleValidator.validateId(id)) {
-			RoleDao.updateRole(role, id);
-		}
-		return true;
 	}
 
 	public static boolean readRole() throws InvalidRoleException, SQLException {
@@ -29,9 +22,9 @@ public class RoleService {
 		return true;
 	}
 
-	public static boolean deleteRole(int id) throws InvalidRoleException {
-		if (RoleValidator.validateId(id)) {
-			RoleDao.deleteRole(id);
+	public static boolean deleteRole(Role role) throws InvalidRoleException, SQLException {
+		if (RoleValidator.validate(role)) {
+			RoleDao.deleteRole(role);
 		}
 		return true;
 

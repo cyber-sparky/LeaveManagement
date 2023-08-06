@@ -1,33 +1,42 @@
 package com.fssa.leavemanagement.dao;
 
+import java.lang.reflect.Executable;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.LocalDate;
-import java.util.logging.Logger;
 
+import com.fssa.leavemanagement.errors.EmployeeErrors;
 import com.fssa.leavemanagement.exceptions.DAOException;
 import com.fssa.leavemanagement.exceptions.InvalidEmployeeException;
 import com.fssa.leavemanagement.model.Employee;
-import com.fssa.leavemanagement.model.EmployeeErrors;
+import com.fssa.leavemanagement.util.ConnectionUtil;
+import com.fssa.leavemanagement.util.Logger;
 import com.fssa.leavemanagement.validator.EmployeeValidator;
 
 public class EmployeeDao {
-	public static final Logger LOGGER = Logger.getLogger(EmployeeDao.class.getName());
 
-	public static void main(String[] args) throws InvalidEmployeeException {
-		Employee emp = new Employee();
-		emp.setDateOfJoin(LocalDate.now());
-		emp.setEmail("saleela@gmail.com");
-		emp.setName("saleela");
-		emp.setPassword("        ");
-		emp.setStatus(true);
-		addEmployee(emp);
+	static Logger logger = new Logger();
+
+	public static int getEmployeeIdByName(String name) throws SQLException {
+		int id = 0;
+		String query = "SELECT id FROM employee WHERE name = ?";
+		try (Connection connection = ConnectionUtil.getConnection()) {
+			try (PreparedStatement pst = connection.prepareStatement(query)) {
+				pst.setString(1, name);
+				try (ResultSet rs = pst.executeQuery()) {
+					while (rs.next()) {
+						id = rs.getInt(1);
+					}
+				}
+			}
+		}
+		return id;
 	}
 
-	public static boolean addEmployee(Employee employee) throws InvalidEmployeeException {
+	public static boolean addEmployee(Employee employee, String role) throws InvalidEmployeeException {
+		int employeeRoleDetailsRows = 0;
 		try {
 			EmployeeValidator.validateEmployee(employee);
 		} catch (InvalidEmployeeException e) {
@@ -35,76 +44,150 @@ public class EmployeeDao {
 			throw new InvalidEmployeeException("Invalid employee passed to DAO Layer", e);
 		}
 
-		
-		
-		try (Connection connection = ConnectionUtil.getConnection()) {
-			String query = "INSERT INTO employee(name,email,date_of_joining, is_active,password) VALUES (?,?,?,?,?);";
-			try (PreparedStatement pst = connection.prepareStatement(query)) {
-				pst.setString(1, employee.getName());
-				pst.setString(2, employee.getEmail());
-				pst.setDate(3, java.sql.Date.valueOf(employee.getDateOfJoin()));
-				pst.setBoolean(4, employee.isStatus());
-				pst.setString(5, employee.getPassword());
-//				pst.setDate(5, java.sql.Date.valueOf(employee.getDateOfRelieve()));
+		if (employee.isStatus()) {
 
-				int rows = pst.executeUpdate();
-				return (rows > 0) ? true : false;
+			try (Connection connection = ConnectionUtil.getConnection()) {
+
+				String query = "INSERT INTO employee(name,email, is_active,password) VALUES (?,?,?,?);";
+
+				try (PreparedStatement pst = connection.prepareStatement(query)) {
+					pst.setString(1, employee.getName());
+					pst.setString(2, employee.getEmail());
+					pst.setBoolean(3, employee.isStatus());
+					pst.setString(4, employee.getPassword());
+
+					int rows = pst.executeUpdate();
+					int roleId = RoleDao.getRoleIdByName(role);
+					int employeeId = EmployeeDao.getEmployeeIdByName(employee.getName());
+					if (role.equals("CEO")) {
+						String queryEmployeeDetail = "INSERT INTO employee_role_details (employee_id,role_id) VALUES (?,?);";
+						try (PreparedStatement pst1 = connection.prepareStatement(queryEmployeeDetail)) {
+							pst1.setInt(1, employeeId);
+							pst1.setInt(2, roleId);
+
+							employeeRoleDetailsRows = pst1.executeUpdate();
+						}
+					} else {
+						int managerId = EmployeeDao.getEmployeeIdByName(employee.getManager().getName());
+						String queryEmployeeDetail = "INSERT INTO employee_role_details (employee_id,role_id,reporting_manager_id) VALUES (?,?,?);";
+						try (PreparedStatement pst1 = connection.prepareStatement(queryEmployeeDetail)) {
+							pst1.setInt(1, employeeId);
+							pst1.setInt(2, roleId);
+							pst1.setInt(3, managerId);
+
+							employeeRoleDetailsRows = pst1.executeUpdate();
+						}
+					}
+
+					return (rows > 0 && employeeRoleDetailsRows > 0) ? true : false;
+				}
+			} catch (SQLException e) {
+				e.printStackTrace();
+				throw new InvalidEmployeeException(EmployeeErrors.CANNOT_ADD_EMPLOYEE);
 			}
-		} 
-		catch (SQLException e) {
-			e.printStackTrace();
-			throw new InvalidEmployeeException(EmployeeErrors.CANNOT_ADD_EMPLOYEE);
+		} else {
+
+			try (Connection connection = ConnectionUtil.getConnection()) {
+
+				String query = "INSERT INTO employee(name,email, is_active,password,date_of_relieving) VALUES (?,?,?,?,?);";
+				try (PreparedStatement pst = connection.prepareStatement(query)) {
+					pst.setString(1, employee.getName());
+					pst.setString(2, employee.getEmail());
+					pst.setBoolean(3, employee.isStatus());
+					pst.setString(4, employee.getPassword());
+					pst.setDate(5, java.sql.Date.valueOf(employee.getDateOfRelieve()));
+					int rows = pst.executeUpdate();
+					return (rows > 0) ? true : false;
+				}
+			} catch (SQLException e) {
+				e.printStackTrace();
+				throw new InvalidEmployeeException(EmployeeErrors.CANNOT_ADD_EMPLOYEE);
+			}
 		}
 
 	}
 
+
+	public static String getRoleByEmployeeName(String name) throws SQLException {
+		String role = null;
+		String query = "SELECT e.name AS employee_name, r.name AS role_name\r\n"
+				+ "FROM employee AS e\r\n"
+				+ "LEFT JOIN employee_role_details AS erd ON e.id = erd.employee_id\r\n"
+				+ "LEFT JOIN role AS r ON erd.role_id = r.id\r\n"
+				+ "WHERE e.name = ?;";
+		try(Connection connection = ConnectionUtil.getConnection()){
+			try(PreparedStatement pst = connection.prepareStatement(query)){
+				pst.setString(1, name);
+				try(ResultSet rs = pst.executeQuery()){
+					while(rs.next()) {
+						role = rs.getString("role_name");
+					}
+				}
+			}
+		}
+		return role;
+	}
 	public static boolean updateEmployee(Employee employee, int id) throws DAOException {
-		try {
-			EmployeeValidator.validateEmployee(employee);
-		} catch (InvalidEmployeeException e) {
-			e.printStackTrace();
-			throw new DAOException("Invalid employee passed to DAO Layer", e);
-		}
+	    try {
+	        EmployeeValidator.validateEmployee(employee);
+	    } catch (InvalidEmployeeException e) {
+	        e.printStackTrace();
+	        throw new DAOException("Invalid employee passed to DAO Layer", e);
+	    }
 
-		try (Connection connection = ConnectionUtil.getConnection()) {
-			String query = "UPDATE employee SET email = ? WHERE id = ?";
-			try (PreparedStatement pst = connection.prepareStatement(query)) {
-				pst.setString(1, employee.getName());
-				
-				pst.setInt(2, id);
-//				pst.setDate(5, java.sql.Date.valueOf(employee.getDateOfRelieve()));
+	    try (Connection connection = ConnectionUtil.getConnection()) {
+	    	if (employee.isStatus()) {
+                int roleId = RoleDao.getRoleIdByName(getRoleByEmployeeName(employee.getName()));
+                String updateEmployeeRoleDetails = "UPDATE employee_role_details SET role_id = ? WHERE employee_id = ?";
+                try (PreparedStatement pst1 = connection.prepareStatement(updateEmployeeRoleDetails)) {
+                    pst1.setInt(1, roleId);
+                    pst1.setInt(2, id);
+                    pst1.executeUpdate();
+                }
+                
+            }
+	        String query = "UPDATE employee SET name = ?, email = ?, is_active = ?, password = ? WHERE id = ?";
+	        try (PreparedStatement pst = connection.prepareStatement(query)) {
+	            pst.setString(1, employee.getName());
+	            pst.setString(2, employee.getEmail());
+	            pst.setBoolean(3, employee.isStatus());
+	            pst.setString(4, employee.getPassword());
+	            pst.setInt(5, id);
 
-				int rows = pst.executeUpdate();
+	            int rows = pst.executeUpdate();
 
-				return (rows > 0) ? true : false;
-			}
-		} catch (SQLException e) {
+	            
 
-			e.printStackTrace();
-			throw new DAOException(e.getMessage());
-		}
-
+	            return (rows > 0) ? true : false;
+	        }
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	        throw new DAOException(e.getMessage());
+	    }
 	}
-	public static boolean deleteEmployee(int id) throws DAOException, InvalidEmployeeException {
-		
-		EmployeeValidator.validateId(id);
 
-		try (Connection connection = ConnectionUtil.getConnection()) {
-			String query = "DELETE FROM employee WHERE id = ?";
-			try (PreparedStatement pst = connection.prepareStatement(query)) {
-				
-				pst.setInt(1, id);
+	public static boolean deleteEmployee(Employee employee) throws DAOException, SQLException {
+	    int deleteEmployeeRow = 0;
+	    int id = EmployeeDao.getEmployeeIdByName(employee.getName());
 
-				int rows = pst.executeUpdate();
+	    try (Connection connection = ConnectionUtil.getConnection()) {
+	        String deleteEmployeeDetails = "DELETE FROM employee_role_details WHERE employee_id = ?";
+	        try (PreparedStatement pst = connection.prepareStatement(deleteEmployeeDetails)) {
+	            pst.setInt(1, id);
+	            int rows = pst.executeUpdate();
 
-				return (rows > 0) ? true : false;
-			}
-		} catch (SQLException e) {
+	            String deleteEmployee = "DELETE FROM employee WHERE id = ?";
+	            try (PreparedStatement pst1 = connection.prepareStatement(deleteEmployee)) {
+	                pst1.setInt(1, id);
+	                deleteEmployeeRow = pst1.executeUpdate();
+	            }
 
-			e.printStackTrace();
-			throw new DAOException(e.getMessage());
-		}
-
+	            return (rows > 0 && deleteEmployeeRow > 0) ? true : false;
+	        }
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	        throw new DAOException(e.getMessage());
+	    }
 	}
 
 	public static boolean readEmployee() throws DAOException, SQLException {
@@ -116,14 +199,14 @@ public class EmployeeDao {
 					// value
 					while (resultSet.next()) { // printing columns until there is no values
 
-						LOGGER.info("id: " + resultSet.getInt(1));
-						LOGGER.info("name: " + resultSet.getString(2));
-						LOGGER.info("email: " + resultSet.getString(3));
-						LOGGER.info("password: " + resultSet.getString(4));
-						LOGGER.info("date of joining: " + resultSet.getDate(5));
-						LOGGER.info("active: " + resultSet.getBoolean(6));
-						LOGGER.info("date of relieving: " + resultSet.getDate(7));
-						LOGGER.info("\n");
+						logger.info("id: " + resultSet.getInt(1));
+						logger.info("name: " + resultSet.getString(2));
+						logger.info("email: " + resultSet.getString(3));
+						logger.info("password: " + resultSet.getString(4));
+						logger.info("date of joining: " + resultSet.getDate(5));
+						logger.info("active: " + resultSet.getBoolean(6));
+						logger.info("date of relieving: " + resultSet.getDate(7));
+						logger.info("\n");
 
 					}
 					return true;
@@ -146,13 +229,13 @@ public class EmployeeDao {
 				try (ResultSet resultSet = pst.executeQuery()) {
 					if (resultSet.next()) {
 
-						LOGGER.info("id: " + resultSet.getInt(1));
-						LOGGER.info("name: " + resultSet.getString(2));
-						LOGGER.info("email: " + resultSet.getString(3));
-						LOGGER.info("password: " + resultSet.getString(4));
-						LOGGER.info("date_of_joining: " + resultSet.getString(5));
-						LOGGER.info("is_active: " + resultSet.getString(6));
-						LOGGER.info("date_of_relieving: " + resultSet.getString(7));
+						logger.info("id: " + resultSet.getInt(1));
+						logger.info("name: " + resultSet.getString(2));
+						logger.info("email: " + resultSet.getString(3));
+						logger.info("password: " + resultSet.getString(4));
+						logger.info("date_of_joining: " + resultSet.getString(5));
+						logger.info("is_active: " + resultSet.getString(6));
+						logger.info("date_of_relieving: " + resultSet.getString(7));
 					}
 				}
 			} catch (SQLException e) {

@@ -10,10 +10,10 @@ public class Employee {
 	boolean status;
 	LocalDate dateOfRelieve;
 	Employee manager;
-	
+
 //	Default Constructor
 	public Employee() {
-		
+
 	}
 
 	public Employee(String name, String email, String password, LocalDate dateOfJoin, boolean status,
@@ -75,9 +75,11 @@ public class Employee {
 	public void setDateOfRelieve(LocalDate dateOfRelieve) {
 		this.dateOfRelieve = dateOfRelieve;
 	}
+
 	public void setManager(Employee manager) {
 		this.manager = manager;
 	}
+
 	public Employee getManager() {
 		return manager;
 	}

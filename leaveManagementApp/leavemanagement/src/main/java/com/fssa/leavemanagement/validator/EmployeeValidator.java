@@ -1,14 +1,13 @@
 package com.fssa.leavemanagement.validator;
 
-import java.time.LocalDate;
 import java.util.regex.Pattern;
 
+import com.fssa.leavemanagement.errors.EmployeeErrors;
 import com.fssa.leavemanagement.exceptions.InvalidEmployeeException;
 import com.fssa.leavemanagement.model.Employee;
-import com.fssa.leavemanagement.model.EmployeeErrors;
 
 public class EmployeeValidator {
-	
+
 	public static boolean validateEmployee(Employee employee) throws InvalidEmployeeException {
 		if (employee == null) {
 			throw new InvalidEmployeeException(EmployeeErrors.INVALID_EMPLOYEE);
@@ -17,31 +16,35 @@ public class EmployeeValidator {
 			validateName(employee.getName());
 			validateEmail(employee.getEmail());
 			validatePassword(employee.getPassword());
-			validateDate(employee.getDateOfJoin());
-		}catch (InvalidEmployeeException e) {
-			throw new InvalidEmployeeException(EmployeeErrors.INVALID_EMPLOYEE);
+		} catch (InvalidEmployeeException e) {
+			throw new InvalidEmployeeException(e.getMessage());
 		}
-		
-		
+
 		return true;
 	}
 
 	public static boolean validateName(String name) throws InvalidEmployeeException {
-		if (name == null || name.length() < 3 || name.trim().length() <= 0) {
+		if (name == null || name.trim().length() < 2) {
 			throw new InvalidEmployeeException(EmployeeErrors.INVALID_NAME);
 
 		}
-		return true;
+		String regex = "^[A-Za-z]{2,30}$";
+		boolean matches = Pattern.compile(regex).matcher(name).matches();
+		if (matches) {
+
+			return true;
+		} else {
+			throw new InvalidEmployeeException(EmployeeErrors.INVALID_NAME);
+		}
 	}
-	
 
 	public static boolean validateId(int id) throws InvalidEmployeeException {
-		if(id <=0) {
+		if (id <= 0) {
 			throw new InvalidEmployeeException(EmployeeErrors.INVALID_ID);
 		}
 		return true;
 	}
-	
+
 	public static boolean validateEmail(String email) throws InvalidEmployeeException {
 		String regex = "^[A-Za-z0-9+_.-]+@(.+)$";
 		boolean matches = Pattern.compile(regex).matcher(email).matches();
@@ -60,13 +63,6 @@ public class EmployeeValidator {
 		} else {
 			throw new InvalidEmployeeException(EmployeeErrors.INVALID_PASSWORD);
 		}
-	}
-
-	public static boolean validateDate(LocalDate date) throws InvalidEmployeeException {
-		if (date == null || date.isAfter(LocalDate.now())) {
-			throw new InvalidEmployeeException(EmployeeErrors.INVALID_DATE);
-		}
-		return true;
 	}
 
 }
